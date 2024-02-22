@@ -1,15 +1,18 @@
 import mechanicalsoup
+import os
+import getpass
 
 
 class OMS_item:
-    def __init__(self, ordering_date, company, product, catalog_number, quantity, price, orderer, status, project,
-                 row=None):
+    def __init__(self, ordering_date, company, product, catalog_number, quantity, price, price_brutto, orderer, status,
+                 project, row=None):
         self.ordering_date = ordering_date
         self.company = company
         self.product = product
         self.catalog_number = catalog_number
         self.quantity = quantity
         self.price = price
+        self.price_brutto = price_brutto
         self.orderer = orderer
         self.status = status
         self.project = project
@@ -24,10 +27,17 @@ class OMS_item:
 
 URL = "https://www.bestellsystem.at/Members/Login.aspx"
 
-with open('login.txt', 'r') as file:
-    lines = file.readlines()
-    LOGIN = lines[0].strip()
-    PASSWORD = lines[1].strip()
+
+if os.path.isfile('./login.txt'):
+    with open('login.txt', 'r') as file:
+        lines = file.readlines()
+        LOGIN = lines[0].strip()
+        PASSWORD = lines[1].strip()
+
+else:
+    LOGIN = input("Please enter your username:  ")
+    PASSWORD = getpass.getpass('Please enter your password:  ')
+
 
 browser = mechanicalsoup.StatefulBrowser(soup_config={'features': 'html5lib'})
 browser.open(URL)
@@ -66,8 +76,8 @@ for row in all_rows:
         all_projects.append(project)
         if '2024' in ordering_date:
             all_items.append(OMS_item(ordering_date=ordering_date, company=company, product=product,
-                                      catalog_number=catalog_number, quantity=quantity, price=price, orderer=orderer,
-                                      status=status, project=project))
+                                      catalog_number=catalog_number, quantity=quantity, price=price,
+                                      price_brutto=float(price)*1.2, orderer=orderer, status=status, project=project))
 
 all_projects = [i[0:31] for i in set(all_projects)]
 
@@ -118,13 +128,14 @@ def get_old_items(sheet_name):
         catalog_number = ws.range(f'D{row}').value
         quantity = ws.range(f'E{row}').value
         price = ws.range(f'F{row}').value
-        orderer = ws.range(f'G{row}').value
-        status = ws.range(f'H{row}').value
-        project = ws.range(f'I{row}').value
+        price_brutto = ws.range(f'G{row}').value
+        orderer = ws.range(f'H{row}').value
+        status = ws.range(f'I{row}').value
+        project = ws.range(f'J{row}').value
         project_dict[sheet_name].known_items.add_item(OMS_item(ordering_date=ordering_date, company=company,
                                                              product=product, catalog_number=catalog_number,
-                                                             quantity=quantity, price=price, orderer=orderer,
-                                                             status=status, project=project, row=row))
+                                                             quantity=quantity, price=price, price_brutto=price_brutto,
+                                                             orderer=orderer, status=status, project=project, row=row))
 
 
 def correct_old_items(sheet_name):
@@ -136,7 +147,7 @@ def correct_old_items(sheet_name):
                 index = project_dict[sheet_name].known_items.index(thing)
                 if thing.status != project_dict[sheet_name].known_items.items[index].status:
                     row = project_dict[sheet_name].known_items.items[index].row
-                    ws.range(f'H{row}').value = thing.status
+                    ws.range(f'I{row}').value = thing.status
 
 
 
@@ -162,25 +173,34 @@ def write_new_items(sheet_name):
             ws.range(f'D{row+last_row}').value = project_dict[sheet_name].new_items[row].catalog_number
             ws.range(f'E{row+last_row}').value = project_dict[sheet_name].new_items[row].quantity
             ws.range(f'F{row+last_row}').value = project_dict[sheet_name].new_items[row].price
-            ws.range(f'G{row+last_row}').value = project_dict[sheet_name].new_items[row].orderer
-            ws.range(f'H{row+last_row}').value = project_dict[sheet_name].new_items[row].status
-            ws.range(f'I{row+last_row}').value = project_dict[sheet_name].new_items[row].project
+            ws.range(f'G{row+last_row}').value = project_dict[sheet_name].new_items[row].price_brutto
+            ws.range(f'H{row+last_row}').value = project_dict[sheet_name].new_items[row].orderer
+            ws.range(f'I{row+last_row}').value = project_dict[sheet_name].new_items[row].status
+            ws.range(f'J{row+last_row}').value = project_dict[sheet_name].new_items[row].project
 
 
 import xlwings as xw
-master_wb = xw.Book(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
-# master_wb = xw.Book(r"Y:\ARRRGH_Users\Bernhard\1_Projects\OMS\Bestellliste_TU_2024.xlsx")
 
-master_sheets = master_wb.sheets
-master_sheets_names = [s.name for s in master_sheets]
+with xw.App(visible=True) as app:
+    master_wb = xw.Book(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
+    # master_wb = xw.Book(r"Y:\ARRRGH_Users\Bernhard\1_Projects\OMS\Bestellliste_TU_2024.xlsx")
+
+    master_sheets = master_wb.sheets
+    master_sheets_names = [s.name for s in master_sheets]
 
 
-project_dict = dict()
-for item in all_projects:
-    project_dict[item] = Project(item)
-    get_last_row(item)
-    get_old_items(item)
+    project_dict = dict()
+    for item in all_projects:
+        project_dict[item] = Project(item)
+        get_last_row(item)
+        get_old_items(item)
 
-    correct_old_items(item)
-    get_new_items(item)
-    write_new_items(item)
+        correct_old_items(item)
+        get_new_items(item)
+        write_new_items(item)
+
+    import time
+    # time.sleep(100)
+
+    master_wb.save(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
+    master_wb.close()
