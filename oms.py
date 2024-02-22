@@ -169,6 +169,8 @@ def write_new_items(sheet_name):
 
 import xlwings as xw
 master_wb = xw.Book(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
+# master_wb = xw.Book(r"Y:\ARRRGH_Users\Bernhard\1_Projects\OMS\Bestellliste_TU_2024.xlsx")
+
 master_sheets = master_wb.sheets
 master_sheets_names = [s.name for s in master_sheets]
 
