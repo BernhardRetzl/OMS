@@ -51,33 +51,30 @@ browser.open('https://www.bestellsystem.at/Members/CurrentOrders.aspx')
 soup = browser.get_current_page()
 
 divs = soup.findAll('div')
-u=divs[52].find_all('tr')
-u[1].find_all('td')
+u=divs[7].find_all('tr')
 
 
-all_rows = soup.find_all('tr')
 
 all_projects = list()
 all_items = list()
 
-for row in all_rows:
-    if '<input border="0" id="ctl00_contentMain_GridView1_ctl' in str(row):
-        info = row.find_all('td')
-        ordering_date = info[10].text
-        company = info[9].text
-        product = info[8].text
-        catalog_number = info[7].text
-        quantity = info[6].text
-        price = info[12].text.replace(',', '.')
-        orderer = info[11].text
-        status = info[3].text.strip()
-        project = info[5].text[0:31]
+for row in u[1:-1]:
+    infos = [info.text.strip() for info in row if info.text.strip()]
+    ordering_date = infos[-3]
+    company = infos[-4]
+    product = infos[-5]
+    catalog_number = infos[4]
+    quantity = infos[3]
+    price = infos[-1].split(' EUR')[0].replace(',', '.')
+    orderer = infos[-2]
+    status = infos[1]
+    project = infos[2][0:31]
 
-        all_projects.append(project)
-        if '2024' in ordering_date:
-            all_items.append(OMS_item(ordering_date=ordering_date, company=company, product=product,
-                                      catalog_number=catalog_number, quantity=quantity, price=price,
-                                      price_brutto=float(price)*1.2, orderer=orderer, status=status, project=project))
+    all_projects.append(project)
+    if '2024' in ordering_date:
+        all_items.append(OMS_item(ordering_date=ordering_date, company=company, product=product,
+                                  catalog_number=catalog_number, quantity=quantity, price=price,
+                                  price_brutto=float(price)*1.2, orderer=orderer, status=status, project=project))
 
 all_projects = [i[0:31] for i in set(all_projects)]
 
@@ -182,8 +179,9 @@ def write_new_items(sheet_name):
 import xlwings as xw
 
 with xw.App(visible=True) as app:
-    master_wb = xw.Book(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
-    # master_wb = xw.Book(r"Y:\ARRRGH_Users\Bernhard\1_Projects\OMS\Bestellliste_TU_2024.xlsx")
+    path = r"Y:\ARRRGH_Users\Bernhard\1_Projects\OMS\Bestellliste_TU_2024_testing.xlsx"
+    # master_wb = xw.Book(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
+    master_wb = xw.Book(path)
 
     master_sheets = master_wb.sheets
     master_sheets_names = [s.name for s in master_sheets]
@@ -202,5 +200,5 @@ with xw.App(visible=True) as app:
     import time
     # time.sleep(100)
 
-    master_wb.save(r"Y:\Lab Management\Bestellliste_TU_2024.xlsx")
+    master_wb.save(path)
     master_wb.close()
