@@ -43,8 +43,8 @@ browser = mechanicalsoup.StatefulBrowser(soup_config={'features': 'html5lib'})
 browser.open(URL)
 browser.select_form('form[action="./Login.aspx"]')
 
-browser["textUserName"] = LOGIN
-browser["textPasswort"] = PASSWORD
+browser["textUsername"] = LOGIN
+browser["textPassword"] = PASSWORD
 
 response = browser.submit_selected()
 browser.open('https://www.bestellsystem.at/Members/CurrentOrders.aspx')
